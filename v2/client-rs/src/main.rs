@@ -1,10 +1,11 @@
 use std::net::TcpStream;
+use std::path::Path;
 
+use http_req::request::{HttpVersion, RequestBuilder};
 use http_req::{tls, uri::Uri};
-use http_req::request::{RequestBuilder, HttpVersion};
 
 fn main() {
-    let addr: Uri = "https://localhost:8000".parse().expect("invalid uri");
+    let addr: Uri = "https://localhost:8000/".parse().expect("invalid uri");
 
     //Connect to remote host
     let stream = {
@@ -19,13 +20,17 @@ fn main() {
             Err(err) => panic!("fail to connect: {:?}", err),
         }
     };
-    info!("connected to {}", addr);
+    println!("connected to {}", addr);
 
     //Open secure connection over TlsStream, because of `addr` (https)
     let mut stream = {
-        const ROOT_CA_PATH = "../pki/ca.cert";
-        let c = match tls::Config::add_root_cert_file_pem(ROOT_CA_PATH) {
-            Ok(v) => v,
+        const ROOT_CA_PATH: &'static str = "../pki/ca.cert";
+        let root_ca_path = Path::new(ROOT_CA_PATH);
+
+        let mut c = tls::Config::default();
+
+        match c.add_root_cert_file_pem(root_ca_path) {
+            Ok(_) => {}
             Err(err) => panic!("failed to add root cert: {:?}", err),
         };
 
@@ -41,7 +46,7 @@ fn main() {
     //Add header `Connection: Close`
     let response = {
         let response = RequestBuilder::new(&addr)
-            .version(HttpVersion::Http20)
+            //.version(HttpVersion::Http20)
             .header("Connection", "Close")
             .send(&mut stream, &mut writer);
         match response {
@@ -55,5 +60,8 @@ fn main() {
         panic!("bad status: {}", status_code);
     }
 
-    println!("response: {}", std::str::from_utf8(&writer).expect("non-utf8 response"));
+    println!(
+        "response: {}",
+        std::str::from_utf8(&writer).expect("non-utf8 response")
+    );
 }

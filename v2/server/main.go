@@ -22,4 +22,5 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Got connection: %s", r.Proto)
 	// 向客户发送一条消息
 	w.Write([]byte("Hello"))
+	w.WriteHeader(http.StatusOK)
 }
